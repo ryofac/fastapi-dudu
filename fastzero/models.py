@@ -20,6 +20,7 @@ class User:
     id: Mapped[int] = mapped_column(init=False, primary_key=True)
     username: Mapped[str] = mapped_column(unique=True)
     password: Mapped[str]
+    full_name: Mapped[str] = mapped_column(nullable=True)
     email: Mapped[str] = mapped_column(unique=True)
 
     # server => quem decide é o servidor, o banco de dados
@@ -31,5 +32,5 @@ class User:
     updated_at: Mapped[datetime] = mapped_column(
         init=False,
         server_default=func.now(),
-        server_onupdate=func.now(),
+        onupdate=func.now(),
     )
