@@ -4,19 +4,20 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
+from sqlalchemy.pool import StaticPool
 
 from fastzero.app import app
+from fastzero.database import get_session
 from fastzero.models import table_registry
 
 
 @pytest.fixture
-def client() -> TestClient:
-    return TestClient(app)
-
-
-@pytest.fixture
 def session() -> Generator[Session, None, None]:
-    engine = create_engine("sqlite:///:memory:")
+    engine = create_engine(
+        "sqlite:///:memory:",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
     table_registry.metadata.create_all(engine)
 
     with Session(engine) as session:
@@ -24,3 +25,21 @@ def session() -> Generator[Session, None, None]:
         # levando essa sessão cofigurada em memória para os testes
 
     table_registry.metadata.drop_all(engine)
+
+
+@pytest.fixture
+def client(session) -> Generator[TestClient, None, None]:
+    # A dependência de sessão é uma função
+    def get_session_override():
+        return session
+
+    # Injeta a sessão criada em memória dentro das rotas do app
+    # Isso para não acessar a sessão real do banco de dados
+    # Essa é uma das vantagens do modelo de injeção de dependências
+    with TestClient(app) as test_client:
+        app.dependency_overrides[get_session] = get_session_override
+        yield test_client
+
+    # Dependency overrides é um dicionario
+    # Assegura que após cada teste isso é resetado
+    app.dependency_overrides.clear()
