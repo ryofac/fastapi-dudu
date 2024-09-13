@@ -8,7 +8,7 @@ from sqlalchemy.pool import StaticPool
 
 from fastzero.app import app
 from fastzero.database import get_session
-from fastzero.models import table_registry
+from fastzero.models import User, table_registry
 
 
 @pytest.fixture
@@ -43,3 +43,19 @@ def client(session) -> Generator[TestClient, None, None]:
     # Dependency overrides é um dicionario
     # Assegura que após cada teste isso é resetado
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def db_user(session) -> User:
+    db_user = User(
+        username="teste",
+        email="teste@email.com",
+        full_name="TESTE TESTE",
+        password="123321",
+    )
+
+    session.add(db_user)
+    session.commit()
+    session.refresh(db_user)
+
+    return db_user
